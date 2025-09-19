@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Counter</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header with streak -->
+    <div class="header">
+      <div class="streak-container">
+        <div class="streak-icon">
+          <img src="icons/fire.gif" alt="Fire" class="fire-gif" id="fireGif">
+        </div>
+        <div class="streak-info">
+          <div class="streak-number" id="streakNumber">0</div>
+          <div class="streak-label">Day Streak</div>
+        </div>
+      </div>
+      <div class="level-info">
+        <div class="level-display">
+          <span class="level-label">Level</span>
+          <span class="level-number" id="levelNumber">1</span>
+        </div>
+        <div class="xp-bar">
+          <div class="xp-progress" id="xpProgress"></div>
+          <span class="xp-text" id="xpText">0/100 XP</span>
+        </div>
+      </div>
+      <div class="last-session" id="lastSession">Complete a pomodoro to start!</div>
+    </div>
+
+    <!-- Timer Section -->
+    <div class="timer-section">
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <div class="timer-label" id="timerLabel">Focus Time</div>
+      
+      <div class="progress-ring">
+        <svg width="120" height="120">
+          <circle cx="60" cy="60" r="54" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+          <circle id="progressCircle" cx="60" cy="60" r="54" stroke="#f97316" stroke-width="8" 
+                  fill="none" stroke-dasharray="339.292" stroke-dashoffset="339.292" 
+                  transform="rotate(-90 60 60)" stroke-linecap="round"/>
+        </svg>
+        <div class="timer-center">
+          <button id="timerBtn" class="timer-btn">START</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meditation Section (shown during break) -->
+    <div class="meditation-section" id="meditationSection" style="display: none;">
+      <div class="meditation-header">
+        <div class="meditation-icon">🧘‍♀️</div>
+        <h3>Mindful Break Time</h3>
+      </div>
+      
+      <div class="meditation-content">
+        <div class="breathing-exercise">
+          <div class="breathing-circle" id="breathingCircle">
+            <div class="breathing-text" id="breathingText">Breathe In</div>
+          </div>
+        </div>
+        
+        <div class="meditation-guide">
+          <h4>✨ Quick Relaxation Guide</h4>
+          <div class="guide-steps">
+            <div class="guide-step">
+              <span class="step-number">1</span>
+              <span class="step-text">Sit comfortably and close your eyes</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-number">2</span>
+              <span class="step-text">Follow the breathing circle above</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-number">3</span>
+              <span class="step-text">Let go of any tension in your body</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-number">4</span>
+              <span class="step-text">Focus only on your breath</span>
+            </div>
+          </div>
+          
+          <div class="meditation-tips">
+            <p>💡 <strong>Pro Tip:</strong> This break helps your brain consolidate what you just learned!</p>
+            <p>🌸 <strong>Remember:</strong> It's okay if your mind wanders - gently bring it back to your breath.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button id="resetBtn" class="control-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+        Reset
+      </button>
+      <button id="settingsBtn" class="control-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
+    </div>
+
+    <!-- Achievements Section -->
+    <div class="achievements">
+      <h3>🏆 Achievements</h3>
+      <div id="achievementsList" class="achievements-list">
+        <div class="achievement-item locked" data-achievement="first-session">
+          <div class="achievement-icon">🎯</div>
+          <div class="achievement-info">
+            <div class="achievement-name">First Focus</div>
+            <div class="achievement-desc">Complete your first pomodoro session</div>
+          </div>
+        </div>
+        <div class="achievement-item locked" data-achievement="week-streak">
+          <div class="achievement-icon">🔥</div>
+          <div class="achievement-info">
+            <div class="achievement-name">Week Warrior</div>
+            <div class="achievement-desc">Maintain a 7-day streak</div>
+          </div>
+        </div>
+        <div class="achievement-item locked" data-achievement="month-master">
+          <div class="achievement-icon">👑</div>
+          <div class="achievement-info">
+            <div class="achievement-name">Month Master</div>
+            <div class="achievement-desc">Achieve a 30-day streak</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spaced Repetition Section -->
+    <div class="spaced-repetition">
+      <h3>Course Reviews</h3>
+      <div id="coursesList" class="courses-list">
+        <div class="no-courses">No course reviews scheduled</div>
+      </div>
+      <button id="addCourseBtn" class="add-course-btn">+ Add Course Review</button>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Settings</h3>
+          <button id="closeModal" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label>Work Duration (minutes)</label>
+            <input type="number" id="workDuration" value="25" min="1" max="60">
+          </div>
+          <div class="setting-group">
+            <label>Break Duration (minutes)</label>
+            <input type="number" id="breakDuration" value="5" min="1" max="30">
+          </div>
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" id="notificationsEnabled" checked>
+              Enable notifications
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveSettings" class="save-btn">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Course Modal -->
+    <div id="addCourseModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Course Review</h3>
+          <button id="closeCourseModal" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label>Course Name</label>
+            <input type="text" id="courseName" placeholder="e.g., Calculus I">
+          </div>
+          <div class="setting-group">
+            <label>Review Interval (days)</label>
+            <select id="reviewInterval">
+              <option value="1">1 day</option>
+              <option value="3">3 days</option>
+              <option value="7" selected>1 week</option>
+              <option value="14">2 weeks</option>
+              <option value="30">1 month</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="addCourse" class="save-btn">Add Course</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

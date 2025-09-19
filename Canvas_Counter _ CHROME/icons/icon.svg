@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <rect width="128" height="128" rx="24" fill="#dc2626"/>
+  
+  <!-- White C letter -->
+  <path d="M64 20C75.046 20 84 28.954 84 40V88C84 99.046 75.046 108 64 108C52.954 108 44 99.046 44 88V40C44 28.954 52.954 20 64 20Z" fill="white"/>
+  
+  <!-- Inner cutout for C shape -->
+  <path d="M64 32C70.627 32 76 37.373 76 44V84C76 90.627 70.627 96 64 96C57.373 96 52 90.627 52 84V44C52 37.373 57.373 32 64 32Z" fill="#dc2626"/>
+</svg>
