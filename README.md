@@ -39,14 +39,6 @@ A Chrome extension for Canvas LMS that helps students maintain study streaks, us
 - Intuitive controls and visual feedback
 - Apple-inspired design aesthetics
 
-## Installation
-
-1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
-5. The Canvas Study Tracker icon will appear in your extensions toolbar
-
 ## Usage
 
 ### Getting Started
