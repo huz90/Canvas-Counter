@@ -112,8 +112,8 @@ class BackgroundTracker {
       // Show notification
       chrome.notifications.create({
         type: 'basic',
-        title: 'Course Review Reminder',
-        message: `${dueCourses.length} course${dueCourses.length > 1 ? 's' : ''} ${dueCourses.length > 1 ? 'are' : 'is'} due for review: ${dueCourses.map(c => c.name).join(', ')}`
+        title: 'Content Review Reminder',
+        message: `${dueCourses.length} content${dueCourses.length > 1 ? 's' : ''} ${dueCourses.length > 1 ? 'are' : 'is'} due for review: ${dueCourses.map(c => c.name).join(', ')}`
       });
     }
   }
@@ -178,7 +178,7 @@ class BackgroundTracker {
     if (this.isWorkSession) {
       // Completed a work session - increment streak and add XP
       await this.incrementStreak();
-      await this.addXP(25); // 25 XP for completing a work session
+      await this.addXP(25); // 25 base XP for completing a work session (plus streak bonus)
       await this.checkAchievements();
       
       // Switch to break
@@ -228,24 +228,54 @@ class BackgroundTracker {
     });
   }
 
-  async addXP(amount) {
-    const result = await chrome.storage.local.get(['level', 'xp']);
+  async addXP(baseAmount) {
+    const result = await chrome.storage.local.get(['level', 'xp', 'streak']);
     let level = result.level || 1;
     let xp = result.xp || 0;
+    const currentStreak = result.streak || 0;
     
-    xp += amount;
+    // Calculate streak bonus
+    const streakBonus = this.calculateStreakBonus(currentStreak);
+    const totalXP = baseAmount + streakBonus;
     
-    // Check for level up
-    const xpToNextLevel = level * 100;
+    xp += totalXP;
+    
+    // Check for level up (reduced XP requirements for better progression)
+    const xpToNextLevel = level * 50; // Reduced from 100 to 50 XP per level
     if (xp >= xpToNextLevel) {
       level++;
       xp = xp - xpToNextLevel;
+      
+      // Show level up notification
+      this.showNotification('🎉 Level Up!', `Congratulations! You've reached level ${level}!`);
     }
     
     await chrome.storage.local.set({ 
       level: level, 
       xp: xp 
     });
+    
+    // Show XP earned notification if there's a streak bonus
+    if (streakBonus > 0) {
+      this.showNotification('🔥 Streak Bonus!', `+${streakBonus} XP bonus for ${currentStreak} day streak!`);
+    }
+  }
+
+  calculateStreakBonus(streak) {
+    // Progressive streak bonus system
+    if (streak <= 1) {
+      return 0; // No bonus for first day
+    } else if (streak <= 3) {
+      return 5; // Small bonus for 2-3 day streak
+    } else if (streak <= 7) {
+      return 10; // Medium bonus for 4-7 day streak
+    } else if (streak <= 14) {
+      return 15; // Good bonus for 1-2 week streak
+    } else if (streak <= 30) {
+      return 25; // Great bonus for 2-4 week streak
+    } else {
+      return 35; // Excellent bonus for 1+ month streak
+    }
   }
 
   async checkAchievements() {
@@ -253,7 +283,11 @@ class BackgroundTracker {
     const achievements = result.achievements || {
       'first-session': false,
       'week-streak': false,
-      'month-master': false
+      'month-master': false,
+      'streak-starter': false,
+      'streak-champion': false,
+      'streak-legend': false,
+      'streak-god': false
     };
     const streak = result.streak || 0;
     
@@ -265,16 +299,40 @@ class BackgroundTracker {
       newAchievements.push('First Focus');
     }
     
-    // Week streak achievement
+    // Streak Starter achievement (3 days)
+    if (!achievements['streak-starter'] && streak >= 3) {
+      achievements['streak-starter'] = true;
+      newAchievements.push('Streak Starter');
+    }
+    
+    // Week streak achievement (7 days)
     if (!achievements['week-streak'] && streak >= 7) {
       achievements['week-streak'] = true;
       newAchievements.push('Week Warrior');
     }
     
-    // Month master achievement
+    // Streak Champion achievement (14 days)
+    if (!achievements['streak-champion'] && streak >= 14) {
+      achievements['streak-champion'] = true;
+      newAchievements.push('Streak Champion');
+    }
+    
+    // Month master achievement (30 days)
     if (!achievements['month-master'] && streak >= 30) {
       achievements['month-master'] = true;
       newAchievements.push('Month Master');
+    }
+    
+    // Streak Legend achievement (60 days)
+    if (!achievements['streak-legend'] && streak >= 60) {
+      achievements['streak-legend'] = true;
+      newAchievements.push('Streak Legend');
+    }
+    
+    // Streak God achievement (100 days)
+    if (!achievements['streak-god'] && streak >= 100) {
+      achievements['streak-god'] = true;
+      newAchievements.push('Streak God');
     }
     
     if (newAchievements.length > 0) {
