@@ -1,7 +1,7 @@
 class StudyTracker {
   constructor() {
-    this.timer = null;
-    this.timeLeft = 25 * 60; // 25 minutes in seconds
+    // Timer state will be synced from background script
+    this.timeLeft = 25 * 60;
     this.isRunning = false;
     this.isWorkSession = true;
     this.settings = {
@@ -28,10 +28,14 @@ class StudyTracker {
     await this.loadStreak();
     await this.loadCourses();
     await this.loadGamificationData();
+    await this.syncTimerState(); // Sync with background timer
     this.bindEvents();
     this.updateDisplay();
     this.updateGamificationDisplay();
     this.checkCanvasVisit();
+    
+    // Start periodic sync with background timer
+    this.startTimerSync();
   }
 
   async loadSettings() {
@@ -91,77 +95,95 @@ class StudyTracker {
     });
   }
 
-  toggleTimer() {
-    if (this.isRunning) {
-      this.pauseTimer();
-    } else {
-      this.startTimer();
+  async syncTimerState() {
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'getTimerState' });
+      const previousWorkSession = this.isWorkSession;
+      
+      this.timeLeft = response.timeLeft;
+      this.isRunning = response.isRunning;
+      this.isWorkSession = response.isWorkSession;
+      this.settings = { ...this.settings, ...response.settings };
+      
+      // Update UI based on current state
+      this.updateTimerButton();
+      this.updateTimerLabel();
+      
+      // Check if session type changed (work <-> break)
+      if (previousWorkSession !== this.isWorkSession) {
+        this.handleSessionChange();
+      }
+    } catch (error) {
+      console.error('Failed to sync timer state:', error);
     }
   }
 
-  startTimer() {
-    this.isRunning = true;
-    document.getElementById('timerBtn').textContent = 'PAUSE';
-    document.getElementById('timerBtn').classList.add('pause');
-    
-    this.timer = setInterval(() => {
-      this.timeLeft--;
+  startTimerSync() {
+    // Sync timer state every second when popup is open
+    this.timerSyncInterval = setInterval(() => {
+      this.syncTimerState();
       this.updateDisplay();
-      
-      if (this.timeLeft <= 0) {
-        this.completeSession();
-      }
     }, 1000);
   }
 
-  pauseTimer() {
-    this.isRunning = false;
-    document.getElementById('timerBtn').textContent = 'START';
-    document.getElementById('timerBtn').classList.remove('pause');
-    clearInterval(this.timer);
+  stopTimerSync() {
+    if (this.timerSyncInterval) {
+      clearInterval(this.timerSyncInterval);
+      this.timerSyncInterval = null;
+    }
   }
 
-  resetTimer() {
-    this.pauseTimer();
-    this.timeLeft = this.isWorkSession ? this.settings.workDuration * 60 : this.settings.breakDuration * 60;
-    this.updateDisplay();
+  async toggleTimer() {
+    try {
+      await chrome.runtime.sendMessage({ action: 'toggleTimer' });
+      await this.syncTimerState();
+      this.updateTimerButton();
+    } catch (error) {
+      console.error('Failed to toggle timer:', error);
+    }
   }
 
-  async completeSession() {
-    this.pauseTimer();
+  async resetTimer() {
+    try {
+      await chrome.runtime.sendMessage({ action: 'resetTimer' });
+      await this.syncTimerState();
+      this.updateDisplay();
+    } catch (error) {
+      console.error('Failed to reset timer:', error);
+    }
+  }
+
+  updateTimerButton() {
+    const timerBtn = document.getElementById('timerBtn');
+    if (this.isRunning) {
+      timerBtn.textContent = 'PAUSE';
+      timerBtn.classList.add('pause');
+    } else {
+      timerBtn.textContent = 'START';
+      timerBtn.classList.remove('pause');
+    }
+  }
+
+  updateTimerLabel() {
+    const timerLabel = document.getElementById('timerLabel');
+    timerLabel.textContent = this.isWorkSession ? 'Focus Time' : 'Break Time';
+  }
+
+  // Session completion is now handled by background script
+  // This method is called when the popup detects a session change
+  handleSessionChange() {
+    this.updateTimerLabel();
+    this.updateGamificationDisplay();
     
-    if (this.isWorkSession) {
-      // Completed a work session - increment streak and add XP
-      await this.incrementStreak();
-      await this.addXP(25); // 25 XP for completing a work session
-      await this.checkAchievements();
-      
-      // Switch to break and show meditation section
-      this.isWorkSession = false;
-      this.timeLeft = this.settings.breakDuration * 60;
-      document.getElementById('timerLabel').textContent = 'Break Time';
+    if (!this.isWorkSession) {
+      // Show meditation section for break
       this.showMeditationSection();
       this.startBreathingAnimation();
-      
-      if (this.settings.notificationsEnabled) {
-        this.showNotification('Work session complete!', 'Time for a mindful break! 🧘‍♀️');
-      }
     } else {
-      // Completed a break session
-      this.isWorkSession = true;
-      this.timeLeft = this.settings.workDuration * 60;
-      document.getElementById('timerLabel').textContent = 'Focus Time';
+      // Hide meditation section for work
       this.hideMeditationSection();
       this.stopBreathingAnimation();
-      
-      if (this.settings.notificationsEnabled) {
-        this.showNotification('Break complete!', 'Ready for another focus session?');
-      }
     }
-    
-    this.updateDisplay();
-    this.updateProgressRing();
-    this.updateGamificationDisplay();
   }
 
   async incrementStreak() {
@@ -191,6 +213,18 @@ class StudyTracker {
 
   updateStreakDisplay() {
     document.getElementById('streakNumber').textContent = this.streak;
+    
+    // Update gif based on streak value
+    const fireGif = document.getElementById('fireGif');
+    if (this.streak === 0) {
+      // Show John Travolta image (fire.gif) for streak 0
+      fireGif.src = 'icons/fire.gif';
+      fireGif.alt = 'John Travolta';
+    } else {
+      // Show animated fire gif for streak > 0
+      fireGif.src = 'icons/fire-animated.gif';
+      fireGif.alt = 'Animated Fire';
+    }
     
     const lastSessionElement = document.getElementById('lastSession');
     if (this.lastSessionDate) {
@@ -242,15 +276,22 @@ class StudyTracker {
   }
 
   async saveSettings() {
-    this.settings.workDuration = parseInt(document.getElementById('workDuration').value);
-    this.settings.breakDuration = parseInt(document.getElementById('breakDuration').value);
-    this.settings.notificationsEnabled = document.getElementById('notificationsEnabled').checked;
+    const newSettings = {
+      workDuration: parseInt(document.getElementById('workDuration').value),
+      breakDuration: parseInt(document.getElementById('breakDuration').value),
+      notificationsEnabled: document.getElementById('notificationsEnabled').checked
+    };
     
-    await chrome.storage.sync.set({ settings: this.settings });
-    
-    // Reset timer with new duration
-    this.resetTimer();
-    this.hideSettings();
+    try {
+      await chrome.runtime.sendMessage({ 
+        action: 'updateSettings', 
+        settings: newSettings 
+      });
+      this.settings = { ...this.settings, ...newSettings };
+      this.hideSettings();
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
   }
 
   showAddCourse() {
@@ -524,5 +565,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Request notification permission
   if (Notification.permission === 'default') {
     Notification.requestPermission();
+  }
+});
+
+// Clean up when popup is closed
+window.addEventListener('beforeunload', () => {
+  if (studyTracker) {
+    studyTracker.stopTimerSync();
   }
 });

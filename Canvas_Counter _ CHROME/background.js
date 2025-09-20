@@ -1,6 +1,15 @@
 // Background script for the Canvas Counter extension
 class BackgroundTracker {
   constructor() {
+    this.timer = null;
+    this.timeLeft = 25 * 60; // 25 minutes in seconds
+    this.isRunning = false;
+    this.isWorkSession = true;
+    this.settings = {
+      workDuration: 25,
+      breakDuration: 5,
+      notificationsEnabled: true
+    };
     this.init();
   }
 
@@ -31,6 +40,15 @@ class BackgroundTracker {
         this.recordCanvasVisit();
       }
     });
+
+    // Listen for messages from popup
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      this.handleMessage(request, sender, sendResponse);
+      return true; // Keep message channel open for async response
+    });
+
+    // Load timer state on startup
+    this.loadTimerState();
   }
 
   onInstall() {
@@ -97,6 +115,226 @@ class BackgroundTracker {
         title: 'Course Review Reminder',
         message: `${dueCourses.length} course${dueCourses.length > 1 ? 's' : ''} ${dueCourses.length > 1 ? 'are' : 'is'} due for review: ${dueCourses.map(c => c.name).join(', ')}`
       });
+    }
+  }
+
+  // Timer methods
+  async loadTimerState() {
+    const result = await chrome.storage.local.get(['timerState', 'settings']);
+    if (result.timerState) {
+      this.timeLeft = result.timerState.timeLeft;
+      this.isRunning = result.timerState.isRunning;
+      this.isWorkSession = result.timerState.isWorkSession;
+    }
+    if (result.settings) {
+      this.settings = { ...this.settings, ...result.settings };
+    }
+    
+    // If timer was running, restart it
+    if (this.isRunning) {
+      this.startTimer();
+    }
+  }
+
+  async saveTimerState() {
+    await chrome.storage.local.set({
+      timerState: {
+        timeLeft: this.timeLeft,
+        isRunning: this.isRunning,
+        isWorkSession: this.isWorkSession
+      }
+    });
+  }
+
+  startTimer() {
+    this.isRunning = true;
+    this.saveTimerState();
+    
+    this.timer = setInterval(() => {
+      this.timeLeft--;
+      this.saveTimerState();
+      
+      if (this.timeLeft <= 0) {
+        this.completeSession();
+      }
+    }, 1000);
+  }
+
+  pauseTimer() {
+    this.isRunning = false;
+    clearInterval(this.timer);
+    this.saveTimerState();
+  }
+
+  resetTimer() {
+    this.pauseTimer();
+    this.timeLeft = this.isWorkSession ? this.settings.workDuration * 60 : this.settings.breakDuration * 60;
+    this.saveTimerState();
+  }
+
+  async completeSession() {
+    this.pauseTimer();
+    
+    if (this.isWorkSession) {
+      // Completed a work session - increment streak and add XP
+      await this.incrementStreak();
+      await this.addXP(25); // 25 XP for completing a work session
+      await this.checkAchievements();
+      
+      // Switch to break
+      this.isWorkSession = false;
+      this.timeLeft = this.settings.breakDuration * 60;
+      
+      if (this.settings.notificationsEnabled) {
+        this.showNotification('Work session complete!', 'Time for a mindful break! 🧘‍♀️');
+      }
+    } else {
+      // Completed a break session
+      this.isWorkSession = true;
+      this.timeLeft = this.settings.workDuration * 60;
+      
+      if (this.settings.notificationsEnabled) {
+        this.showNotification('Break complete!', 'Ready for another focus session?');
+      }
+    }
+    
+    this.saveTimerState();
+  }
+
+  async incrementStreak() {
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+    
+    const result = await chrome.storage.local.get(['streak', 'lastSessionDate']);
+    let streak = result.streak || 0;
+    let lastSessionDate = result.lastSessionDate;
+    
+    if (lastSessionDate === today) {
+      // Already completed a session today
+      return;
+    } else if (lastSessionDate === yesterday) {
+      // Continuing streak
+      streak++;
+    } else {
+      // New streak or broken streak
+      streak = 1;
+    }
+    
+    lastSessionDate = today;
+    
+    await chrome.storage.local.set({
+      streak: streak,
+      lastSessionDate: lastSessionDate
+    });
+  }
+
+  async addXP(amount) {
+    const result = await chrome.storage.local.get(['level', 'xp']);
+    let level = result.level || 1;
+    let xp = result.xp || 0;
+    
+    xp += amount;
+    
+    // Check for level up
+    const xpToNextLevel = level * 100;
+    if (xp >= xpToNextLevel) {
+      level++;
+      xp = xp - xpToNextLevel;
+    }
+    
+    await chrome.storage.local.set({ 
+      level: level, 
+      xp: xp 
+    });
+  }
+
+  async checkAchievements() {
+    const result = await chrome.storage.local.get(['achievements', 'streak']);
+    const achievements = result.achievements || {
+      'first-session': false,
+      'week-streak': false,
+      'month-master': false
+    };
+    const streak = result.streak || 0;
+    
+    let newAchievements = [];
+    
+    // First session achievement
+    if (!achievements['first-session']) {
+      achievements['first-session'] = true;
+      newAchievements.push('First Focus');
+    }
+    
+    // Week streak achievement
+    if (!achievements['week-streak'] && streak >= 7) {
+      achievements['week-streak'] = true;
+      newAchievements.push('Week Warrior');
+    }
+    
+    // Month master achievement
+    if (!achievements['month-master'] && streak >= 30) {
+      achievements['month-master'] = true;
+      newAchievements.push('Month Master');
+    }
+    
+    if (newAchievements.length > 0) {
+      await chrome.storage.local.set({ achievements: achievements });
+      this.showAchievementNotification(newAchievements);
+    }
+  }
+
+  showNotification(title, message) {
+    chrome.notifications.create({
+      type: 'basic',
+      title: title,
+      message: message,
+      iconUrl: '/icons/icon.svg'
+    });
+  }
+
+  showAchievementNotification(achievements) {
+    const message = achievements.length === 1 
+      ? `Achievement unlocked: ${achievements[0]}!`
+      : `Achievements unlocked: ${achievements.join(', ')}!`;
+    
+    this.showNotification('🏆 Achievement Unlocked!', message);
+  }
+
+  // Message handling
+  async handleMessage(request, sender, sendResponse) {
+    switch (request.action) {
+      case 'getTimerState':
+        sendResponse({
+          timeLeft: this.timeLeft,
+          isRunning: this.isRunning,
+          isWorkSession: this.isWorkSession,
+          settings: this.settings
+        });
+        break;
+        
+      case 'toggleTimer':
+        if (this.isRunning) {
+          this.pauseTimer();
+        } else {
+          this.startTimer();
+        }
+        sendResponse({ success: true });
+        break;
+        
+      case 'resetTimer':
+        this.resetTimer();
+        sendResponse({ success: true });
+        break;
+        
+      case 'updateSettings':
+        this.settings = { ...this.settings, ...request.settings };
+        await chrome.storage.sync.set({ settings: this.settings });
+        this.resetTimer(); // Reset timer with new settings
+        sendResponse({ success: true });
+        break;
+        
+      default:
+        sendResponse({ error: 'Unknown action' });
     }
   }
 }
