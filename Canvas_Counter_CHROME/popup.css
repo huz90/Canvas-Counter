@@ -280,17 +280,25 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 4s ease-in-out;
-  animation: breathingCycle 8s ease-in-out infinite;
+  animation: breathingCycle 14s ease-in-out infinite;
 }
 
 @keyframes breathingCycle {
-  0%, 100% { 
+  0% { 
     transform: scale(1); 
     background: rgba(255, 255, 255, 0.2);
   }
-  50% { 
+  42.86% { 
     transform: scale(1.3); 
     background: rgba(255, 255, 255, 0.4);
+  }
+  71.43% { 
+    transform: scale(1.3); 
+    background: rgba(255, 255, 255, 0.4);
+  }
+  100% { 
+    transform: scale(1); 
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
