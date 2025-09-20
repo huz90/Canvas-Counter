@@ -115,3 +115,21 @@ For issues, suggestions, or contributions, please refer to the extension's suppo
 ## License
 
 This extension is provided as-is for educational and productivity purposes.
+
+## Patch Notes
+
+# 1.1.0
+Fixed timer not keeping track when the extension is closed. 
+Added gif change after streak = 1
+# 1.2.0
+Fixed XP system not going beyond level 1
+Added level scaling beyond level 1
+Added XP bonus for longer streak days
+Timer added to meditation time
+New achievements added
+Fixed meditation text syncing with dynamic breathing circle
+Changed "Course Review" to "Content Review" for clarity
+# 1.2.1
+Changed Icon
+# 1.2.21
+Increased time on breathing circle
