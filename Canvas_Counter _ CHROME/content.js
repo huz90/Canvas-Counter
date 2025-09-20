@@ -11,7 +11,7 @@ class CanvasTracker {
     // Add study tracker indicator
     this.addStudyIndicator();
     
-    // Check for course reviews
+    // Check for content reviews
     this.checkCourseReviews();
   }
 
@@ -62,11 +62,11 @@ class CanvasTracker {
       <div class="review-reminder">
         <div class="reminder-header">
           <span class="reminder-icon">📚</span>
-          <strong>Course Review Reminder</strong>
+          <strong>Content Review Reminder</strong>
           <button class="reminder-close">×</button>
         </div>
         <div class="reminder-content">
-          <p>You have ${dueCourses.length} course${dueCourses.length > 1 ? 's' : ''} due for review:</p>
+          <p>You have ${dueCourses.length} content${dueCourses.length > 1 ? 's' : ''} due for review:</p>
           <ul>
             ${dueCourses.map(course => `<li>${course.name}</li>`).join('')}
           </ul>

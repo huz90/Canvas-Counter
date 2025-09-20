@@ -17,7 +17,11 @@ class StudyTracker {
     this.achievements = {
       'first-session': false,
       'week-streak': false,
-      'month-master': false
+      'month-master': false,
+      'streak-starter': false,
+      'streak-champion': false,
+      'streak-legend': false,
+      'streak-god': false
     };
     
     this.init();
@@ -68,7 +72,7 @@ class StudyTracker {
   }
 
   calculateXpToNextLevel() {
-    this.xpToNextLevel = this.level * 100;
+    this.xpToNextLevel = this.level * 50; // Reduced from 100 to 50 XP per level
   }
 
   bindEvents() {
@@ -113,8 +117,33 @@ class StudyTracker {
       if (previousWorkSession !== this.isWorkSession) {
         this.handleSessionChange();
       }
+      
+      // Also sync gamification data
+      await this.syncGamificationData();
     } catch (error) {
       console.error('Failed to sync timer state:', error);
+    }
+  }
+
+  async syncGamificationData() {
+    try {
+      const result = await chrome.storage.local.get(['level', 'xp', 'achievements']);
+      const previousLevel = this.level;
+      
+      this.level = result.level || 1;
+      this.xp = result.xp || 0;
+      this.achievements = { ...this.achievements, ...result.achievements };
+      this.calculateXpToNextLevel();
+      
+      // Update display
+      this.updateGamificationDisplay();
+      
+      // Check for level up animation
+      if (this.level > previousLevel) {
+        this.showLevelUpAnimation();
+      }
+    } catch (error) {
+      console.error('Failed to sync gamification data:', error);
     }
   }
 
@@ -345,7 +374,7 @@ class StudyTracker {
     const container = document.getElementById('coursesList');
     
     if (this.courses.length === 0) {
-      container.innerHTML = '<div class="no-courses">No course reviews scheduled</div>';
+      container.innerHTML = '<div class="no-courses">No content reviews scheduled</div>';
       return;
     }
     
@@ -364,12 +393,12 @@ class StudyTracker {
             <div class="course-due">${timeUntil}</div>
           </div>
           <div class="course-actions">
-            <button class="course-action review-btn" data-course-id="${course.id}" title="Mark as reviewed">
+            <button class="course-action review-btn" data-course-id="${course.id}" title="Mark content as reviewed">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="20,6 9,17 4,12"></polyline>
               </svg>
             </button>
-            <button class="course-action remove-btn" data-course-id="${course.id}" title="Remove course">
+            <button class="course-action remove-btn" data-course-id="${course.id}" title="Remove content">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -402,21 +431,12 @@ class StudyTracker {
     });
   }
 
+  // XP management is now handled by the background script
+  // This method is kept for compatibility but delegates to background
   async addXP(amount) {
-    this.xp += amount;
-    
-    // Check for level up
-    if (this.xp >= this.xpToNextLevel) {
-      this.level++;
-      this.xp = this.xp - this.xpToNextLevel;
-      this.calculateXpToNextLevel();
-      this.showLevelUpAnimation();
-    }
-    
-    await chrome.storage.local.set({ 
-      level: this.level, 
-      xp: this.xp 
-    });
+    // XP is automatically added by background script when sessions complete
+    // This method is no longer needed but kept for compatibility
+    console.log('addXP called in popup - XP is managed by background script');
   }
 
   async checkAchievements() {
@@ -498,7 +518,8 @@ class StudyTracker {
     const meditationSection = document.getElementById('meditationSection');
     const timerSection = document.querySelector('.timer-section');
     
-    timerSection.style.display = 'none';
+    // Keep timer section visible during break so users can see the countdown
+    timerSection.style.display = 'block';
     meditationSection.style.display = 'block';
   }
 
@@ -511,24 +532,55 @@ class StudyTracker {
   }
 
   startBreathingAnimation() {
+    const breathingText = document.getElementById('breathingText');
+    
+    // Initialize timeout tracking array
+    this.breathingTimeouts = [];
+    
+    // Set initial text
+    breathingText.textContent = 'Breathe In';
+    
+    // Sync with CSS animation timing (8 second cycle)
+    // 0-4 seconds: Breathe In (circle expanding)
+    // 4-6 seconds: Hold (circle at max size)
+    // 6-8 seconds: Breathe Out (circle contracting)
+    
+    const timeout1 = setTimeout(() => {
+      breathingText.textContent = 'Hold';
+    }, 4000); // After 4 seconds
+    
+    const timeout2 = setTimeout(() => {
+      breathingText.textContent = 'Breathe Out';
+    }, 6000); // After 6 seconds
+    
+    this.breathingTimeouts.push(timeout1, timeout2);
+    
+    // Restart the cycle every 8 seconds
     this.breathingInterval = setInterval(() => {
-      const breathingText = document.getElementById('breathingText');
-      const currentText = breathingText.textContent;
+      breathingText.textContent = 'Breathe In';
       
-      if (currentText === 'Breathe In') {
+      const timeout3 = setTimeout(() => {
         breathingText.textContent = 'Hold';
-      } else if (currentText === 'Hold') {
+      }, 4000);
+      
+      const timeout4 = setTimeout(() => {
         breathingText.textContent = 'Breathe Out';
-      } else {
-        breathingText.textContent = 'Breathe In';
-      }
-    }, 2000); // Change text every 2 seconds
+      }, 6000);
+      
+      this.breathingTimeouts.push(timeout3, timeout4);
+    }, 8000);
   }
 
   stopBreathingAnimation() {
     if (this.breathingInterval) {
       clearInterval(this.breathingInterval);
       this.breathingInterval = null;
+    }
+    
+    // Clear any pending setTimeout timers
+    if (this.breathingTimeouts) {
+      this.breathingTimeouts.forEach(timeout => clearTimeout(timeout));
+      this.breathingTimeouts = [];
     }
     
     // Reset breathing text
