@@ -1,4 +1,4 @@
-# Canvas-Counter---Final
+# Canvas-Counter
 Keep up your canvas streak!
 
 ## Installation
