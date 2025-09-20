@@ -1,0 +1,7 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Static fire icon for streak 0 -->
+  <path d="M16 2L20 10H16L12 2H16Z" fill="#ff6600"/>
+  <path d="M16 10L20 18H16L12 10H16Z" fill="#ff8800"/>
+  <path d="M16 18L20 26H16L12 18H16Z" fill="#ffaa00"/>
+  <path d="M16 26L20 30H16L12 26H16Z" fill="#ffff00"/>
+</svg>
