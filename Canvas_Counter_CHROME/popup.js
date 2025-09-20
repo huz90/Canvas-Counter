@@ -540,35 +540,35 @@ class StudyTracker {
     // Set initial text
     breathingText.textContent = 'Breathe In';
     
-    // Sync with CSS animation timing (8 second cycle)
-    // 0-4 seconds: Breathe In (circle expanding)
-    // 4-6 seconds: Hold (circle at max size)
-    // 6-8 seconds: Breathe Out (circle contracting)
+    // Sync with CSS animation timing (14 second cycle)
+    // 0-6 seconds: Breathe In (circle expanding)
+    // 6-10 seconds: Hold (circle at max size)
+    // 10-14 seconds: Breathe Out (circle contracting)
     
     const timeout1 = setTimeout(() => {
       breathingText.textContent = 'Hold';
-    }, 4000); // After 4 seconds
+    }, 6000); // After 6 seconds
     
     const timeout2 = setTimeout(() => {
       breathingText.textContent = 'Breathe Out';
-    }, 6000); // After 6 seconds
+    }, 10000); // After 10 seconds
     
     this.breathingTimeouts.push(timeout1, timeout2);
     
-    // Restart the cycle every 8 seconds
+    // Restart the cycle every 14 seconds
     this.breathingInterval = setInterval(() => {
       breathingText.textContent = 'Breathe In';
       
       const timeout3 = setTimeout(() => {
         breathingText.textContent = 'Hold';
-      }, 4000);
+      }, 6000);
       
       const timeout4 = setTimeout(() => {
         breathingText.textContent = 'Breathe Out';
-      }, 6000);
+      }, 10000);
       
       this.breathingTimeouts.push(timeout3, timeout4);
-    }, 8000);
+    }, 14000);
   }
 
   stopBreathingAnimation() {
