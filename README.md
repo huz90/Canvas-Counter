@@ -11,7 +11,6 @@ Keep up your canvas streak!
     This will **NOT** work.  
   - Instead, open that folder and select the **“Canvas Counter – CHROME”** folder.  
 - The Canvas Study Tracker icon will appear in your extensions toolbar
-# Canvas Study Tracker
 
 A Chrome extension for Canvas LMS that helps students maintain study streaks, use pomodoro technique, and implement spaced repetition for course reviews.
 
