@@ -7,7 +7,7 @@ Keep up your canvas streak!
 - Open Chrome and navigate to `chrome://extensions/`  
 - Enable **Developer mode** in the top right  
 - Click **Load unpacked** and select the **Canvas Counter – CHROME** folder  
-  - **ATTENTION:** Do **NOT** select the **“Canvas Counter – Final – main”** folder.  
+  - **ATTENTION:** Do **NOT** select the **“Canvas Counter–main”** folder.  
     This will **NOT** work.  
   - Instead, open that folder and select the **“Canvas Counter – CHROME”** folder.  
 - The Canvas Counter icon will appear in your extensions toolbar
